@@ -95,6 +95,38 @@ button:hover {
   gap: 0.75rem;
 }
 
+.tiny-editor .widget-block {
+  display: block;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed #94a3b8;
+  background: #f8fafc;
+  position: relative;
+}
+
+.tiny-editor .widget-block__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.tiny-editor .widget-block__label {
+  font-weight: 600;
+}
+
+.tiny-editor .widget-block__type {
+  font-size: 0.75rem;
+  background: #e2e8f0;
+  color: #0f172a;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .tiny-editor textarea {
   min-height: 240px;
   padding: 1rem;
