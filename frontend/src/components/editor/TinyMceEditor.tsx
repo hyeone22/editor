@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ensureWidgetPlugin } from '../../plugins/widgetPlugin';
 
 type EditorStatus = 'loading' | 'ready' | 'error';
 
 const TINYMCE_SCRIPT_ID = 'tinymce-cdn-script';
 const DEFAULT_API_KEY = 'no-api-key';
+
+interface TinyMcePluginManager {
+  add: (name: string, callback: (editor: unknown) => void) => void;
+}
 
 interface TinyMceInstance {
   remove: () => void;
@@ -14,6 +19,7 @@ interface TinyMceGlobal {
   init: (
     config: Record<string, unknown>,
   ) => Promise<TinyMceInstance | TinyMceInstance[]> | TinyMceInstance | TinyMceInstance[];
+  PluginManager: TinyMcePluginManager;
 }
 
 declare global {
@@ -40,6 +46,18 @@ const TinyMceEditor = () => {
         '<li>목록, 링크, 표 등 TinyMCE 기본 기능이 정상 동작하는지 확인할 수 있습니다.</li>',
         '</ul>',
       ].join(''),
+    [],
+  );
+
+  const contentStyle = useMemo(
+    () =>
+      [
+        "body { font-family: 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 16px; color: #0f172a; }",
+        '.widget-block { display: block; border: 1px dashed #94a3b8; border-radius: 12px; padding: 16px; background: #f8fafc; position: relative; }',
+        '.widget-block__placeholder { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; color: #334155; gap: 0.75rem; }',
+        '.widget-block__label { font-weight: 600; }',
+        '.widget-block__type { font-size: 0.75rem; background: #e2e8f0; color: #0f172a; border-radius: 9999px; padding: 0.25rem 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }',
+      ].join('\n'),
     [],
   );
 
@@ -72,17 +90,19 @@ const TinyMceEditor = () => {
       }
 
       try {
+        ensureWidgetPlugin(window.tinymce);
         const result = await window.tinymce.init({
           target,
           menubar: false,
-          plugins: 'lists link table code',
+          plugins: 'lists link table code noneditable widgetBlocks',
           toolbar:
             'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | table | link | code',
           height: 480,
           branding: false,
           resize: true,
-          content_style:
-            "body { font-family: 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 16px; color: #0f172a; }",
+          content_style: contentStyle,
+          extended_valid_elements:
+            'div[data-widget-type|data-widget-id|data-widget-config|data-widget-title|data-widget-version]',
           setup: (editor: TinyMceInstance) => {
             editorRef.current = editor;
             editor.on('init', () => setStatusSafe('ready'));
@@ -143,7 +163,7 @@ const TinyMceEditor = () => {
         scriptElement.removeEventListener('error', handleScriptError);
       }
     };
-  }, [apiKey]);
+  }, [apiKey, contentStyle]);
 
   return (
     <div className="tiny-editor">
