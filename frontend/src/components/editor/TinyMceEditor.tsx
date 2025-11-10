@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureWidgetPlugin } from '../../plugins/widgetPlugin';
 
-// 커스텀 위젯 렌더러 등록 (Text, Table, Graph)
+// 커스텀 위젯 렌더러 등록 (Text, Table, Graph, Page Break)
 import '../widgets/TextWidget';
 import '../widgets/TableWidget';
 import '../widgets/GraphWidget';
+import '../widgets/PageBreakWidget';
 
 type EditorStatus = 'loading' | 'ready' | 'error';
 
@@ -154,6 +155,7 @@ const TinyMceEditor = () => {
         '</ul>',
         `<div data-widget-type="table" data-widget-title="분기별 매출" data-widget-config='${sampleTableWidgetConfig}'></div>`,
         `<div data-widget-type="graph" data-widget-title="분기별 성장률" data-widget-config='${sampleGraphWidgetConfig}'></div>`,
+        '<div data-widget-type="pageBreak" data-widget-title="페이지 나누기"></div>',
         `<div data-widget-type="text" data-widget-title="보고서 요약" data-widget-config='${sampleTextWidgetConfig}'></div>`,
       ].join(''),
     [sampleTextWidgetConfig, sampleTableWidgetConfig, sampleGraphWidgetConfig],
@@ -237,6 +239,15 @@ const TinyMceEditor = () => {
     editor.focus?.();
   }, []);
 
+  // 페이지 나누기 위젯 삽입(테스트용)
+  const handleInsertPageBreakWidget = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.insertContent('<div data-widget-type="pageBreak" data-widget-title="페이지 나누기"></div>');
+    editor.focus?.();
+  }, []);
+
   // 에디터 내용 CSS (테이블 위젯용 기본 스타일 포함)
   const contentStyle = useMemo(
     () =>
@@ -263,6 +274,15 @@ const TinyMceEditor = () => {
         '.graph-widget__canvas{position:relative;height:320px}',
         '.graph-widget__empty{display:flex;align-items:center;justify-content:center;height:240px;background:#e2e8f0;color:#475569;border-radius:8px;font-size:14px}',
         '.graph-widget__note{margin-top:8px;font-size:12px;color:#0f172a}',
+        '.page-break-widget-host{display:block}',
+        '.page-break-widget{display:flex;flex-direction:column;gap:6px;padding:16px;border:2px dashed #38bdf8;border-radius:12px;background:#ecfeff;position:relative}',
+        '.page-break-widget__label{font-weight:700;font-size:16px;color:#0f172a}',
+        '.page-break-widget__description{font-size:13px;color:#0369a1}',
+        '.page-break-widget__rule{border-top:2px dashed #38bdf8;margin-top:4px}',
+        '.page-break-widget--spacing-none{margin:0}',
+        '.page-break-widget--spacing-small{margin:8px 0}',
+        '.page-break-widget--spacing-medium{margin:16px 0}',
+        '.page-break-widget--spacing-large{margin:32px 0}',
       ].join('\n'),
     [],
   );
@@ -427,6 +447,9 @@ const TinyMceEditor = () => {
         </button>
         <button type="button" onClick={handleInsertGraphWidget} disabled={status !== 'ready'}>
           그래프 위젯 삽입
+        </button>
+        <button type="button" onClick={handleInsertPageBreakWidget} disabled={status !== 'ready'}>
+          페이지 나누기 삽입
         </button>
         <span style={{ color: '#64748b' }}>위젯을 더블클릭(또는 Enter/Space)하면 편집합니다.</span>
       </div>

@@ -198,6 +198,51 @@ button:hover {
   outline-offset: 2px;
 }
 
+.page-break-widget-host {
+  display: block;
+}
+
+.page-break-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem;
+  border: 2px dashed #38bdf8;
+  border-radius: 0.75rem;
+  background: #ecfeff;
+}
+
+.page-break-widget__label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.page-break-widget__description {
+  font-size: 0.85rem;
+  color: #0369a1;
+}
+
+.page-break-widget__rule {
+  border-top: 2px dashed #38bdf8;
+  margin-top: 0.25rem;
+}
+
+.page-break-widget--spacing-none {
+  margin: 0;
+}
+
+.page-break-widget--spacing-small {
+  margin: 0.5rem 0;
+}
+
+.page-break-widget--spacing-medium {
+  margin: 1rem 0;
+}
+
+.page-break-widget--spacing-large {
+  margin: 2rem 0;
+}
+
 .binder-card {
   display: flex;
   flex-direction: column;
