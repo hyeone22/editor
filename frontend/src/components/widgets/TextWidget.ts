@@ -152,10 +152,7 @@ const createTextWidget = (
   container.className = 'text-widget';
   container.tabIndex = 0;
   container.setAttribute('role', 'button');
-  container.setAttribute(
-    'aria-label',
-    `${descriptor.title ?? '텍스트 위젯'} 편집 (더블 클릭 또는 Enter 키)`,
-  );
+  container.setAttribute('aria-label', `${descriptor.title ?? '텍스트 위젯'} 편집 (Enter 키)`);
 
   const contentElement = document.createElement('div');
   contentElement.className = 'text-widget__content';
@@ -168,14 +165,14 @@ const createTextWidget = (
 
   const hint = document.createElement('span');
   hint.className = 'text-widget__hint';
-  hint.textContent = '더블 클릭하거나 Enter 키를 눌러 편집하세요';
+  hint.textContent = 'Enter 키를 눌러 편집하세요';
 
   container.append(contentElement, hint);
 
   const editContent = () => {
     const currentValue = config.richText
       ? contentElement.innerHTML
-      : contentElement.textContent ?? '';
+      : (contentElement.textContent ?? '');
     const nextValue = window.prompt('텍스트 위젯 내용을 입력하세요.', currentValue);
     if (nextValue === null) {
       return;
@@ -189,6 +186,10 @@ const createTextWidget = (
     }
     config.content = trimmed;
     updateElementConfig(hostElement, config);
+
+    // ✅ TinyMCE에 변경 사실 알리기 + DOM 변경으로 NodeChange 유도
+    hostElement.dispatchEvent(new CustomEvent('widget:changed', { bubbles: true }));
+    hostElement.setAttribute('data-widget-version', String(Date.now()));
   };
 
   const handleDoubleClick = () => {
@@ -202,20 +203,32 @@ const createTextWidget = (
     }
   };
 
+  // ✅ 커스텀 이벤트 핸들러 추가
+  const handleEditEvent = () => editContent();
+
   container.addEventListener('dblclick', handleDoubleClick);
   container.addEventListener('keydown', handleKeyDown);
 
-  hostElement.replaceChildren(container);
+  // ✅ 호스트에서 커스텀 이벤트를 듣는다
+  hostElement.addEventListener('widget:edit', handleEditEvent);
 
+  hostElement.replaceChildren(container);
   return {
     destroy: () => {
       container.removeEventListener('dblclick', handleDoubleClick);
       container.removeEventListener('keydown', handleKeyDown);
+      hostElement.removeEventListener('widget:edit', handleEditEvent);
     },
   };
 };
 
-const renderTextWidget = ({ element, data }: { element: HTMLElement; data: WidgetRenderDescriptor }) => {
+const renderTextWidget = ({
+  element,
+  data,
+}: {
+  element: HTMLElement;
+  data: WidgetRenderDescriptor;
+}) => {
   const hostElement = element as TextWidgetHostElement;
   const previousInstance = hostElement[TEXT_WIDGET_INSTANCE_KEY];
   if (previousInstance) {

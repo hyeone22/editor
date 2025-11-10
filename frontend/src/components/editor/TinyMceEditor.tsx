@@ -11,11 +11,25 @@ interface TinyMcePluginManager {
   add: (name: string, callback: (editor: unknown) => void) => void;
 }
 
+interface TinyMceEvent {
+  target?: Element | null;
+  key?: string;
+}
+
 interface TinyMceInstance {
   remove: () => void;
-  on: (eventName: string, callback: () => void) => void;
+  on: <T = TinyMceEvent>(eventName: string, callback: (event: T) => void) => void;
   insertContent: (content: string) => void;
   focus?: () => void;
+  selection?: {
+    getNode?: () => HTMLElement | null;
+    getRng?: () => Range | null;
+  };
+  getBody?: () => HTMLElement | null; // ✅ 추가
+  // ✅ TinyMCE 내부 API 일부
+  fire?: (eventName: string, data?: Record<string, unknown>) => void;
+  nodeChanged?: () => void;
+  setDirty?: (state: boolean) => void;
 }
 
 interface TinyMceGlobal {
@@ -84,8 +98,7 @@ const TinyMceEditor = () => {
     };
 
     const serialised = JSON.stringify(config).replace(/'/g, '&#39;');
-    const widgetHtml =
-      `<div data-widget-type="text" data-widget-title="새 텍스트" data-widget-config='${serialised}'></div>`;
+    const widgetHtml = `<div data-widget-type="text" data-widget-title="새 텍스트" data-widget-config='${serialised}'></div>`;
     editor.insertContent(widgetHtml);
     editor.focus?.();
   }, []);
@@ -136,7 +149,7 @@ const TinyMceEditor = () => {
         const result = await window.tinymce.init({
           target,
           menubar: false,
-          plugins: 'lists link table code noneditable widgetBlocks',
+          plugins: 'lists link table code widgetBlocks',
           toolbar:
             'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | table | link | code',
           height: 480,
@@ -147,7 +160,68 @@ const TinyMceEditor = () => {
             'div[data-widget-type|data-widget-id|data-widget-config|data-widget-title|data-widget-version]',
           setup: (editor: TinyMceInstance) => {
             editorRef.current = editor;
-            editor.on('init', () => setStatusSafe('ready'));
+
+            editor.on('init', () => {
+              setStatusSafe('ready');
+
+              // ✅ iframe 내부의 native 더블클릭 이벤트를 직접 감지 (TinyMCE 내부 가로채기 우회)
+              // ✅ iframe/inline 모두 대응
+              const body = editor.getBody?.();
+              const doc = body?.ownerDocument;
+
+              if (doc) {
+                const handleNativeDblClick = (event: MouseEvent) => {
+                  const target = event.target as HTMLElement | null;
+                  const host = target?.closest?.('[data-widget-type]');
+                  if (host) {
+                    host.dispatchEvent(new CustomEvent('widget:edit', { bubbles: true }));
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }
+                };
+                // ✅ 캡처 단계에서 먼저 가로채기
+                doc.addEventListener('dblclick', handleNativeDblClick, { capture: true });
+
+                const handleClick = (event: MouseEvent) => {
+                  if ((event as any).detail === 2) handleNativeDblClick(event);
+                };
+                doc.addEventListener('click', handleClick, { capture: true });
+
+                editor.on('remove', () => {
+                  doc.removeEventListener('dblclick', handleNativeDblClick, {
+                    capture: true,
+                  } as any);
+                  doc.removeEventListener('click', handleClick, { capture: true } as any);
+                });
+
+                // ✅ 위젯 변경 감지 → TinyMCE에 변경 상태 반영
+                const handleWidgetChanged = () => {
+                  editor.fire?.('change');
+                  (editor as any).setDirty?.(true);
+                  editor.nodeChanged?.();
+                };
+
+                doc.addEventListener('widget:changed', handleWidgetChanged, { capture: true });
+
+                editor.on('remove', () => {
+                  doc.removeEventListener('widget:changed', handleWidgetChanged, {
+                    capture: true,
+                  } as any);
+                });
+              }
+            }); // ✅ ← 여기서 init 끝남!
+
+            // ✅ 키보드 접근성 (Enter/Space)
+            editor.on('KeyDown', (e: any) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              const anchor = editor.selection?.getNode?.();
+              const host = anchor?.closest?.('[data-widget-type]');
+              if (host) {
+                host.dispatchEvent(new CustomEvent('widget:edit', { bubbles: true }));
+                e.preventDefault?.();
+                e.stopPropagation?.();
+              }
+            });
           },
         });
 
@@ -232,7 +306,8 @@ const TinyMceEditor = () => {
           텍스트 위젯 삽입
         </button>
         <span className="editor-widget-actions__hint">
-          TinyMCE 상단 도구와 함께 커스텀 텍스트 위젯을 추가하고, 위젯을 더블 클릭하여 내용을 편집할 수 있습니다.
+          TinyMCE 상단 도구와 함께 커스텀 텍스트 위젯을 추가하고, 위젯을 더블 클릭하여 내용을 편집할
+          수 있습니다.
         </span>
       </div>
 

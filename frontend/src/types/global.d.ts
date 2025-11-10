@@ -1,8 +1,5 @@
-export {};
-
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tinymce?: any;
+    tinymce?: TinyMceGlobal; // ← any 금지, 실제 인터페이스 사용
   }
 }
