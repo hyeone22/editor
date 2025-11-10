@@ -1,4 +1,8 @@
-import { serialiseWidgetConfig, widgetRendererRegistry, type WidgetRenderDescriptor } from '../../utils/widgetRenderer';
+import {
+  serialiseWidgetConfig,
+  widgetRendererRegistry,
+  type WidgetRenderDescriptor,
+} from '../../utils/widgetRenderer';
 import type { PageBreakWidget } from '../../types/Widget';
 
 type PageBreakSpacing = NonNullable<PageBreakWidget['spacing']>;
@@ -106,7 +110,9 @@ const renderPageBreakWidget = ({
   host.setAttribute('aria-label', `${config.displayLabel ?? '페이지 나누기'} 구분선`);
 
   const container = document.createElement('div');
-  container.className = ['page-break-widget', PAGE_BREAK_SPACING_CLASS[config.spacing]].filter(Boolean).join(' ');
+  container.className = ['page-break-widget', PAGE_BREAK_SPACING_CLASS[config.spacing]]
+    .filter(Boolean)
+    .join(' ');
 
   const label = document.createElement('div');
   label.className = 'page-break-widget__label';

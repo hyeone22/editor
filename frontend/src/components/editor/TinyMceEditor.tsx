@@ -244,7 +244,9 @@ const TinyMceEditor = () => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    editor.insertContent('<div data-widget-type="pageBreak" data-widget-title="페이지 나누기"></div>');
+    editor.insertContent(
+      '<div data-widget-type="pageBreak" data-widget-title="페이지 나누기"></div>',
+    );
     editor.focus?.();
   }, []);
 
@@ -283,6 +285,13 @@ const TinyMceEditor = () => {
         '.page-break-widget--spacing-small{margin:8px 0}',
         '.page-break-widget--spacing-medium{margin:16px 0}',
         '.page-break-widget--spacing-large{margin:32px 0}',
+        // ✅ 여기 추가
+        '@media print {',
+        '  [data-page-break="true"] { break-after: page; page-break-after: always; }',
+        '  [data-page-break="true"][data-keep-with-next="true"] { break-inside: avoid; page-break-inside: avoid; }',
+        '  [data-page-break="true"][data-keep-with-next="true"] + * { break-before: avoid-page; page-break-before: auto; }',
+        '  .page-break-widget { border: 0; padding: 0; color: transparent; background: none; }',
+        '}',
       ].join('\n'),
     [],
   );
@@ -325,7 +334,7 @@ const TinyMceEditor = () => {
           resize: true,
           content_style: contentStyle,
           extended_valid_elements:
-            'div[data-widget-type|data-widget-id|data-widget-config|data-widget-title|data-widget-version]',
+            'div[data-widget-type|data-widget-id|data-widget-config|data-widget-title|data-widget-version|data-page-break|data-keep-with-next|data-spacing|data-display-label]',
           setup: (editor: TinyMceInstance) => {
             editorRef.current = editor;
 
