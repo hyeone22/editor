@@ -212,13 +212,14 @@ const TinyMceEditor: FC = () => {
         '.widget-block{ cursor: default !important; }',
 
         '/* ========= WIDGET HOST ========= */',
-        '[data-widget-type]{ position:relative; display:inline-block; vertical-align:top; width:100%; max-width:100%; min-width:240px; box-sizing:border-box; margin:10px; }',
+        // ↳ block + auto margin (폭은 유지: 100% 또는 resize된 px 그대로)
+        '[data-widget-type]{ position:relative; display:block; width:100%; max-width:100%; min-width:240px; box-sizing:border-box; margin:10px auto; }',
 
         /* free 모드일 때만 절대배치 */
         '[data-widget-type][data-position="free"]{ position:absolute !important; width:auto !important; max-width:none !important; min-width:120px; margin:0; box-sizing:border-box; z-index:1; }',
         '[data-widget-type][data-position="free"] .widget-block{ width:auto !important; }',
 
-        '/* 카드 스타일 */',
+        '/* 카드 스타일 (host 폭을 그대로 사용) */',
         '.widget-block{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:16px; box-shadow:0 1px 1px rgba(2,6,23,.04), 0 2px 4px rgba(2,6,23,.06); width:100%; box-sizing:border-box; overflow:hidden; }',
         ".widget-block::before{ content:''; position:absolute; inset:0; border-radius:inherit; background:var(--card-grad); pointer-events:none; }",
         '.widget-block:hover{ box-shadow:0 4px 10px rgba(2,6,23,.08); transform:translateY(-1px); transition:box-shadow .15s ease, transform .15s ease; }',
@@ -254,6 +255,15 @@ const TinyMceEditor: FC = () => {
         '.graph-widget{ display:grid; gap:10px }',
         '.graph-widget__canvas{ position:relative; height:320px; border:1px solid var(--card-border); border-radius:10px; background:linear-gradient(180deg,rgba(148,163,184,.08),rgba(148,163,184,0)) }',
         '.graph-widget__note{ margin-top:6px; font-size:12px; color:var(--ink-sub) }',
+
+        /* ===== 정렬: host 자체 이동 (폭은 그대로) ===== */
+        '[data-widget-type]:not([data-position="free"])[data-align="left"]  { margin-left:0;    margin-right:auto; }',
+        '[data-widget-type]:not([data-position="free"])[data-align="center"]{ margin-left:auto; margin-right:auto; }',
+        '[data-widget-type]:not([data-position="free"])[data-align="right"] { margin-left:auto; margin-right:0; }',
+        // (텍스트를 같이 정렬하고 싶으면 아래 3줄을 켜세요)
+        // '[data-widget-type][data-align="left"]  .widget-block{ text-align:left; }',
+        // '[data-widget-type][data-align="center"] .widget-block{ text-align:center; }',
+        // '[data-widget-type][data-align="right"] .widget-block{ text-align:right; }',
 
         /* 프린트 */
         '@media print{',
@@ -329,12 +339,43 @@ const TinyMceEditor: FC = () => {
           resize: true,
 
           extended_valid_elements:
-            'div[data-widget-type|data-widget-id|data-widget-config|data-widget-title|data-widget-version|data-widget-order|data-page-break|data-keep-with-next|data-spacing|data-display-label|data-position],' +
+            // ⬇️ data-align 허용 추가
+            'div[data-widget-type|data-align|data-widget-id|data-widget-config|data-widget-title|data-widget-version|data-widget-order|data-page-break|data-keep-with-next|data-spacing|data-display-label|data-position],' +
             'span[class|role|aria-hidden|contenteditable|tabindex|style|data-mce-bogus|draggable|unselectable]',
 
           setup: (editor: TinyMceInstance) => {
             editorRef.current = editor;
 
+            // ===== 정렬 브릿지: 툴바/단축키 정렬을 위젯 host에 매핑 =====
+            const applyWidgetAlign = (cmd: string) => {
+              const anchor = editor.selection?.getNode?.();
+              const host = anchor?.closest?.('[data-widget-type]') as HTMLElement | null;
+              if (!host) return false;
+
+              // free(절대배치)는 정렬 무시
+              if (host.getAttribute('data-position') === 'free') return false;
+
+              let align: 'left' | 'center' | 'right' | 'justify' = 'left';
+              if (cmd === 'JustifyCenter') align = 'center';
+              else if (cmd === 'JustifyRight') align = 'right';
+              else if (cmd === 'JustifyFull') align = 'justify';
+
+              host.setAttribute('data-align', align === 'justify' ? 'left' : align);
+              editor.fire?.('change');
+              editor.setDirty?.(true);
+              editor.nodeChanged?.();
+              return true;
+            };
+
+            editor.on('BeforeExecCommand', (e: any) => {
+              if (!/^Justify(Left|Center|Right|Full)$/.test(e.command)) return;
+              if (applyWidgetAlign(e.command)) {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+              }
+            });
+
+            // ===== 초기화 이후 플러그인 장착/핸들러 =====
             editor.on('init', () => {
               setStatusSafe('ready');
 
