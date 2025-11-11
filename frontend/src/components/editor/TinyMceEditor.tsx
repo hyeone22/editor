@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureWidgetPlugin } from '../../plugins/widgetPlugin';
 import attachWidgetDragDrop from '../../plugins/widgetDragDrop';
+import attachWidgetResize from '../../plugins/widgetResize';
 
 // 커스텀 위젯 렌더러 등록 (Text, Table, Graph, Page Break)
 import '../widgets/TextWidget';
@@ -59,6 +60,7 @@ const TinyMceEditor = () => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorRef = useRef<TinyMceInstance | null>(null);
   const dragDropCleanupRef = useRef<(() => void) | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [status, setStatus] = useState<EditorStatus>('loading');
 
   const apiKey =
@@ -312,6 +314,8 @@ const TinyMceEditor = () => {
     const cleanup = () => {
       dragDropCleanupRef.current?.();
       dragDropCleanupRef.current = null;
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
       if (editorRef.current) {
         editorRef.current.remove();
         editorRef.current = null;
@@ -345,6 +349,8 @@ const TinyMceEditor = () => {
             editorRef.current = editor;
             dragDropCleanupRef.current?.();
             dragDropCleanupRef.current = attachWidgetDragDrop(editor);
+            resizeCleanupRef.current?.();
+            resizeCleanupRef.current = attachWidgetResize(editor);
 
             editor.on('init', () => {
               setStatusSafe('ready');
@@ -380,6 +386,8 @@ const TinyMceEditor = () => {
                 editor.on('remove', () => {
                   dragDropCleanupRef.current?.();
                   dragDropCleanupRef.current = null;
+                  resizeCleanupRef.current?.();
+                  resizeCleanupRef.current = null;
                   doc.removeEventListener('dblclick', handleDbl, true);
                   doc.removeEventListener('click', handleClick, true);
                   doc.removeEventListener('widget:changed', handleWidgetChanged, true);

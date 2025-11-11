@@ -104,6 +104,46 @@ button:hover {
   position: relative;
 }
 
+.tiny-editor .widget-block--resizing {
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.4);
+  cursor: se-resize;
+}
+
+.tiny-editor .widget-resize-handle {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid #0ea5e9;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: se-resize;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.tiny-editor .widget-resize-handle::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #0ea5e9;
+  border-bottom: 2px solid #0ea5e9;
+  transform: rotate(45deg);
+}
+
+.tiny-editor .widget-block:hover .widget-resize-handle,
+.tiny-editor .widget-block:focus-within .widget-resize-handle,
+.tiny-editor .widget-block--resizing .widget-resize-handle {
+  opacity: 1;
+}
+
 .tiny-editor .widget-block__placeholder {
   display: flex;
   align-items: center;
