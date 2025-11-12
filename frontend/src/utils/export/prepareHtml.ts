@@ -70,14 +70,40 @@ export const prepareHtml = async (
   options: PrepareHtmlOptions = {},
 ): Promise<PrepareHtmlResult> => {
   const exportDocument = createDocument(sourceBody, options.title);
-  const clonedBody = sourceBody.cloneNode(true) as HTMLElement;
+  const sourceTag = sourceBody.tagName.toLowerCase();
 
-  exportDocument.body.replaceChildren(clonedBody);
+  const adoptBodyAttributes = (target: HTMLElement, source: HTMLElement) => {
+    Array.from(target.attributes).forEach((attr) => {
+      target.removeAttribute(attr.name);
+    });
+
+    Array.from(source.attributes).forEach((attr) => {
+      target.setAttribute(attr.name, attr.value);
+    });
+  };
+
+  let targetBody: HTMLElement;
+
+  if (sourceTag === 'body') {
+    targetBody = exportDocument.body;
+    adoptBodyAttributes(targetBody, sourceBody);
+
+    const importedChildren = Array.from(sourceBody.childNodes).map((child) =>
+      exportDocument.importNode(child, true),
+    );
+
+    targetBody.replaceChildren(...importedChildren);
+  } else {
+    const clonedBody = exportDocument.importNode(sourceBody, true) as HTMLElement;
+    exportDocument.body.replaceChildren(clonedBody);
+    targetBody = clonedBody;
+  }
+
   injectHeadAssets(exportDocument, options);
 
   await serializeWidgets({
     sourceRoot: sourceBody,
-    targetRoot: clonedBody,
+    targetRoot: targetBody,
     document: exportDocument,
   });
 
@@ -86,7 +112,7 @@ export const prepareHtml = async (
 
   return {
     html,
-    body: clonedBody,
+    body: targetBody,
     document: exportDocument,
   };
 };
