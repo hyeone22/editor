@@ -5,6 +5,7 @@
     "types": ["vite/client"]
   },
   "include": ["src"],
+  "exclude": ["src/utils/export/__tests__"],
   "references": [
     {
       "path": "./tsconfig.node.json"

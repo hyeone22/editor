@@ -11,5 +11,13 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  // Vitest configuration - ignored by TypeScript without vitest types.
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error Vitest config is picked up when the dependency is installed.
+  test: {
+    environment: 'happy-dom',
+    globals: true,
+    restoreMocks: true
   }
 });
