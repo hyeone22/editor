@@ -3,6 +3,7 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureWidgetPlugin } from '../../plugins/widgetPlugin';
 import attachWidgetDragDrop from '../../plugins/widgetDragDrop';
 import attachWidgetResize from '../../plugins/widgetResize';
+import ExportButton from './ExportButton';
 
 // 커스텀 위젯 렌더러 등록(에디터용 런타임은 기존처럼 유지)
 import '../widgets/TextWidget';
@@ -519,6 +520,9 @@ const TinyMceEditor: FC = () => {
     [],
   );
 
+  const exportInlineStyles = useMemo(() => [contentStyle], [contentStyle]);
+  const getEditorBody = useCallback(() => editorRef.current?.getBody?.() ?? null, []);
+
   // ===== 업로드(Uploadcare → base64) =====
   async function uploadViaUploadcare(): Promise<string | null> {
     try {
@@ -858,6 +862,13 @@ const TinyMceEditor: FC = () => {
         <button type="button" onClick={handleInsertPageBreakWidget} disabled={status !== 'ready'}>
           페이지 나누기 삽입
         </button>
+        <ExportButton
+          getSourceBody={getEditorBody}
+          disabled={status !== 'ready'}
+          filename="tinymce-export"
+          documentTitle={document.title}
+          inlineStyles={exportInlineStyles}
+        />
         <span style={{ color: '#64748b' }}>
           위젯 더블클릭(또는 Enter/Space) → 편집 • 프리뷰에서도 그래프/표가 보이도록 재렌더링합니다.
         </span>
