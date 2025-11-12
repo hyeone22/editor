@@ -18,7 +18,7 @@ const DEFAULT_API_KEY = 'no-api-key';
 const TINYMCE_CHANNEL = '6';
 
 // === Upload ===
-const UPLOADCARE_PUBLIC_KEY = 'a3920bdf61b6edc8ea74'; // 네 키
+const UPLOADCARE_PUBLIC_KEY = 'a3920bdf61b6edc8ea74';
 
 interface TinyMcePluginManager {
   add: (name: string, callback: (editor: unknown) => void) => void;
@@ -56,7 +56,6 @@ declare global {
 
 /* -----------------------------
    프리뷰 전용 위젯 프리렌더러
-   - Preview iframe 안에서 정적 HTML/SVG로 다시 그림
 --------------------------------*/
 function mountAllWidgets(doc: Document) {
   const hosts = Array.from(doc.querySelectorAll<HTMLElement>('[data-widget-type]'));
@@ -70,7 +69,6 @@ function mountAllWidgets(doc: Document) {
       cfg = null;
     }
 
-    // 안쪽 초기화(중복 렌더 방지)
     host.innerHTML = '';
 
     if (type === 'text') {
@@ -113,7 +111,6 @@ function renderTableWidget(host: HTMLElement, cfg: any) {
   const table = d.createElement('table');
   table.className = 'table-widget__table';
 
-  // head
   if (cfg?.showHeader !== false && Array.isArray(cfg?.columns)) {
     const thead = d.createElement('thead');
     const tr = d.createElement('tr');
@@ -127,7 +124,6 @@ function renderTableWidget(host: HTMLElement, cfg: any) {
     table.appendChild(thead);
   }
 
-  // body
   const tbody = d.createElement('tbody');
   (cfg?.rows ?? []).forEach((row: any) => {
     const tr = d.createElement('tr');
@@ -145,7 +141,6 @@ function renderTableWidget(host: HTMLElement, cfg: any) {
   container.appendChild(table);
   wrap.appendChild(container);
 
-  // summary
   if (Array.isArray(cfg?.summary) && cfg.summary.length) {
     const sum = d.createElement('div');
     sum.className = 'table-widget__summary';
@@ -183,7 +178,6 @@ function formatCell(v: any, format?: string) {
 }
 
 function renderGraphWidget(host: HTMLElement, cfg: any) {
-  // 간단 SVG 라인/바 차트 렌더러(프리뷰 전용, 의존성 없음)
   const d = host.ownerDocument;
   const wrap = d.createElement('div');
   wrap.className = 'widget-block graph-widget';
@@ -209,14 +203,12 @@ function renderGraphWidget(host: HTMLElement, cfg: any) {
   const labels: string[] = cfg?.labels ?? [];
   const datasets: Array<{ id?: string; label?: string; data: number[] }> = cfg?.datasets ?? [];
 
-  // 값 범위 계산
   const allValues = datasets.flatMap((ds) => ds.data);
   const minV = Math.min(...allValues, 0);
   const maxV = Math.max(...allValues, 1);
   const yScale = (val: number) => h - pad - ((val - minV) / (maxV - minV || 1)) * (h - pad * 2);
   const xScale = (i: number) => pad + (i * (w - pad * 2)) / Math.max(labels.length - 1, 1);
 
-  // 축
   const axis = d.createElementNS(svg.namespaceURI, 'g');
   const xLine = d.createElementNS(svg.namespaceURI, 'line');
   xLine.setAttribute('x1', String(pad));
@@ -237,7 +229,6 @@ function renderGraphWidget(host: HTMLElement, cfg: any) {
   axis.appendChild(yLine);
   svg.appendChild(axis);
 
-  // 라벨(간단)
   labels.forEach((lab, i) => {
     const tx = d.createElementNS(svg.namespaceURI, 'text');
     tx.textContent = lab;
@@ -250,11 +241,9 @@ function renderGraphWidget(host: HTMLElement, cfg: any) {
     svg.appendChild(tx);
   });
 
-  // 데이터셋
   const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
   datasets.forEach((ds, idx) => {
     if ((cfg?.chartType ?? 'line') === 'bar') {
-      // 막대
       const barW = Math.min(36, (w - pad * 2) / (labels.length * (datasets.length + 1)));
       ds.data.forEach((v, i) => {
         const x = xScale(i) - (datasets.length / 2) * barW + idx * barW;
@@ -269,7 +258,6 @@ function renderGraphWidget(host: HTMLElement, cfg: any) {
         svg.appendChild(rect);
       });
     } else {
-      // 라인
       const path = d.createElementNS(svg.namespaceURI, 'path');
       const dStr = ds.data
         .map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`)
@@ -280,7 +268,6 @@ function renderGraphWidget(host: HTMLElement, cfg: any) {
       path.setAttribute('stroke-width', '2');
       svg.appendChild(path);
 
-      // 포인트
       ds.data.forEach((v, i) => {
         const circle = d.createElementNS(svg.namespaceURI, 'circle');
         circle.setAttribute('cx', String(xScale(i)));
@@ -332,7 +319,7 @@ const TinyMceEditor: FC = () => {
   const sampleTextWidgetConfig = useMemo(() => {
     const config = {
       content:
-        '<p><strong>텍스트 위젯</strong>은 보고서에서 반복적으로 사용하는 설명이나 코멘트를 저장하는 데 사용할 수 있습니다.</p><p>Enter 키를 눌러 편집하세요.</p>',
+        '<p><strong>재무 요약</strong> — 당사는 최근 매출이 30.5% 증가하였으나 현금성자산 감소로…</p><ul><li>표·그림·텍스트 위젯 배치/정렬 가능</li><li>순서 변경, 크기/위치 조정 가능</li></ul>',
       richText: true,
       style: { alignment: 'left', fontSize: 15, lineHeight: 1.6 },
     };
@@ -343,30 +330,51 @@ const TinyMceEditor: FC = () => {
       showHeader: true,
       responsive: true,
       columns: [
-        { id: 'col-quarter', label: '분기', align: 'left', format: 'text' },
-        { id: 'col-revenue', label: '매출 (USD)', align: 'right', format: 'currency' },
-        { id: 'col-growth', label: '성장률', align: 'right', format: 'percent' },
+        { id: 'col-name', label: '기업명', align: 'left', format: 'text' },
+        { id: 'col-ceo', label: '대표자', align: 'left', format: 'text' },
+        { id: 'col-since', label: '설립일자', align: 'left', format: 'text' },
+        { id: 'col-addr', label: '본사주소', align: 'left', format: 'text' },
       ],
       rows: [
         {
-          id: 'row-q1',
+          id: 'row-1',
           cells: [
-            { columnId: 'col-quarter', value: '2024 Q1' },
-            { columnId: 'col-revenue', value: 12_500_000 },
-            { columnId: 'col-growth', value: 0.12 },
+            { columnId: 'col-name', value: '한국기업 주식회사' },
+            { columnId: 'col-ceo', value: '홍길동' },
+            { columnId: 'col-since', value: '2001-03-12' },
+            { columnId: 'col-addr', value: '서울특별시 …' },
           ],
         },
         {
-          id: 'row-q2',
+          id: 'row-2',
           cells: [
-            { columnId: 'col-quarter', value: '2024 Q2' },
-            { columnId: 'col-revenue', value: 14_800_000 },
-            { columnId: 'col-growth', value: 0.18 },
+            { columnId: 'col-name', value: '한국기업 주식회사' },
+            { columnId: 'col-ceo', value: '홍길동' },
+            { columnId: 'col-since', value: '2001-03-12' },
+            { columnId: 'col-addr', value: '서울특별시 …' },
+          ],
+        },
+        {
+          id: 'row-3',
+          cells: [
+            { columnId: 'col-name', value: '한국기업 주식회사' },
+            { columnId: 'col-ceo', value: '홍길동' },
+            { columnId: 'col-since', value: '2001-03-12' },
+            { columnId: 'col-addr', value: '서울특별시 …' },
+          ],
+        },
+        {
+          id: 'row-4',
+          cells: [
+            { columnId: 'col-name', value: '한국기업 주식회사' },
+            { columnId: 'col-ceo', value: '홍길동' },
+            { columnId: 'col-since', value: '2001-03-12' },
+            { columnId: 'col-addr', value: '서울특별시 …' },
           ],
         },
       ],
-      summary: [{ label: '연간 누적', value: '$27.3M', align: 'right' }],
-      footnote: '※ 모든 수치는 미감사 자료 기준입니다.',
+      summary: [],
+      footnote: '',
     };
     return JSON.stringify(config).replace(/'/g, '&#39;');
   }, []);
@@ -383,6 +391,7 @@ const TinyMceEditor: FC = () => {
     return JSON.stringify(config).replace(/'/g, '&#39;');
   }, []);
 
+  // ===== 초기 콘텐츠 =====
   const initialContent = useMemo(
     () =>
       [
@@ -477,16 +486,25 @@ const TinyMceEditor: FC = () => {
         "body{ font-family:'Noto Sans KR',system-ui,-apple-system,'Segoe UI',sans-serif; font-size:16px; color:var(--ink); position:relative; }",
         '[data-widget-type]{ cursor: default !important; }',
         '.widget-block{ cursor: default !important; }',
-        '[data-widget-type]{ position:relative; display:block; width:100%; max-width:100%; min-width:240px; box-sizing:border-box; margin:10px auto; }',
+
+        /* ========= WIDGET HOST: block으로 고정 (정렬용) ========= */
+        // 기존 inline-block 규칙은 제거
+        '[data-widget-type]{ position:relative; display:block; width:100%; max-width:100%; min-width:220px; box-sizing:border-box; margin:10px 12px 10px 0; break-inside:avoid; -webkit-column-break-inside:avoid; }',
+
+        /* free 모드일 때만 절대배치 */
         '[data-widget-type][data-position="free"]{ position:absolute !important; width:auto !important; max-width:none !important; min-width:120px; margin:0; box-sizing:border-box; z-index:1; }',
         '[data-widget-type][data-position="free"] .widget-block{ width:auto !important; }',
-        '.widget-block{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:16px; box-shadow:0 1px 1px rgba(2,6,23,.04), 0 2px 4px rgba(2,6,23,.06); width:100%; box-sizing:border-box; overflow:hidden; color:inherit; }',
-        ".widget-block::before{ content:''; position:absolute; inset:0; border-radius:inherit; background:var(--card-grad); pointer-events:none; }",
-        '.widget-block:hover{ box-shadow:0 4px 10px rgba(2,6,23,.08); transform:translateY(-1px); transition:box-shadow .15s ease, transform .15s ease; }',
-        '.widget-block:focus-within{ box-shadow:var(--ring), 0 6px 14px rgba(2,6,23,.10); }',
-        '.widget-block--dragging{ opacity:.85; cursor:grabbing; border-style:solid }',
-        '.widget-block--resizing{ box-shadow:var(--ring); cursor:se-resize }',
-        ".widget-block::after{ content:''; position:absolute; right:.6rem; bottom:.6rem; width:12px; height:12px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent); opacity:.85; pointer-events:none }",
+
+        /* 카드 스타일 */
+        '.widget-block{position:relative;background:transparent;border:2px solid #6025E1;border-radius:14px;padding:16px;width:100%;box-sizing:border-box;overflow:hidden;color:#000;transition:border-color .2s ease,box-shadow .2s ease;}',
+        '.widget-block::before{content:none;}',
+        '.widget-block:hover{border-color:#7a3df5;box-shadow:0 0 0 3px rgba(96,37,225,0.15);}',
+        '.widget-block:focus-within{border-color:#7a3df5;box-shadow:0 0 0 3px rgba(96,37,225,0.25);}',
+        '.widget-block--dragging{opacity:.9;cursor:grabbing;border-style:solid;}',
+        '.widget-block--resizing{cursor:se-resize;border-color:#6025E1;box-shadow:0 0 0 2px rgba(96,37,225,0.25);}',
+        ".widget-block::after{content:'';position:absolute;right:.6rem;bottom:.6rem;width:12px;height:12px;border-right:2px solid #6025E1;border-bottom:2px solid #6025E1;opacity:.8;pointer-events:none;}",
+
+        /* 리사이즈 핸들 */
         '.widget-resize-handle{ position:absolute; width:12px; height:12px; background:#fff; border:2px solid #0ea5e9; border-radius:4px; z-index:1000; pointer-events:auto; }',
         '.widget-resize-handle--se{ right:6px; bottom:6px; cursor:nwse-resize; }',
         '.widget-resize-handle--ne{ right:6px; top:6px;    cursor:nesw-resize; }',
@@ -496,25 +514,76 @@ const TinyMceEditor: FC = () => {
         '.widget-resize-handle--w{  left:-6px;  top:50%; transform:translateY(-50%); cursor:ew-resize; }',
         '.widget-resize-handle--s{  bottom:-6px; left:50%; transform:translateX(-50%); cursor:ns-resize; }',
         '.widget-resize-handle--n{  top:-6px;    left:50%; transform:translateX(-50%); cursor:ns-resize; }',
+
+        /* 표/그래프 */
         '.table-widget{ display:grid; gap:12px }',
-        '.table-widget__table-container{ overflow:auto; border-radius:10px; border:1px solid var(--card-border); background:linear-gradient(180deg,rgba(148,163,184,.08),rgba(148,163,184,0)) }',
+        '.table-widget__table-container{ overflow:auto; border-radius:10px; border:1px solid #e2e8f0; background:linear-gradient(180deg,rgba(148,163,184,.08),rgba(148,163,184,0)) }',
         '.table-widget__table{ width:100%; border-collapse:collapse; min-width:520px }',
-        '.table-widget__table thead th{ position:sticky; top:0; background:var(--card-bg); font-weight:700; font-size:13.5px; color:var(--ink-sub); letter-spacing:.02em; border-bottom:1px solid var(--card-border); padding:10px 12px; text-align:left }',
+        '.table-widget__table thead th{ position:sticky; top:0; background:#fff; font-weight:700; font-size:13.5px; color:#475569; letter-spacing:.02em; border-bottom:1px solid #e2e8f0; padding:10px 12px; text-align:left }',
         '.table-widget__table tbody tr:nth-child(even){ background:rgba(148,163,184,.08) }',
-        '.table-widget__table tbody td{ padding:10px 12px; border-bottom:1px dashed var(--card-border); vertical-align:top; font-size:14px }',
+        '.table-widget__table tbody td{ padding:10px 12px; border-bottom:1px dashed #e2e8f0; vertical-align:top; font-size:14px }',
         '.table-widget__summary{ display:grid; gap:6px; margin:4px 0 0 }',
-        '.table-widget__footnote{ color:var(--ink-sub); font-size:12px; margin-top:6px }',
+        '.table-widget__footnote{ color:#64748b; font-size:12px; margin-top:6px }',
         '.graph-widget{ display:grid; gap:10px }',
-        '.graph-widget__canvas{ background:#fff; border:1px solid var(--card-border); border-radius:10px; }',
-        '.graph-widget__note{ margin-top:6px; font-size:12px; color:var(--ink-sub) }',
+        '.graph-widget__canvas{ background:#fff; border:1px solid #e2e8f0; border-radius:10px; }',
+        '.graph-widget__note{ margin-top:6px; font-size:12px; color:#64748b }',
+
+        /* ===== 정렬: host 자체 이동 ===== */
         '[data-widget-type]:not([data-position="free"])[data-align="left"]  { margin-left:0;    margin-right:auto; }',
         '[data-widget-type]:not([data-position="free"])[data-align="center"]{ margin-left:auto; margin-right:auto; }',
         '[data-widget-type]:not([data-position="free"])[data-align="right"] { margin-left:auto; margin-right:0; }',
+
+        /* 레이아웃 */
+        '.report-header{ display:grid; grid-template-columns: 1.2fr 1fr 1.1fr; grid-template-areas:"brand title meta" ". corp  meta"; gap:6px 24px; align-items:end; margin:6px 2px 18px;}',
+        '.report-header .brand{ grid-area:brand; font-weight:700; font-size:20px; letter-spacing:.2px;}',
+        '.report-header .report-title{ grid-area:title; margin:0; font-size:28px; font-weight:800;}',
+        '.report-header .corp-name{ grid-area:corp; font-size:20px; font-weight:800;}',
+        '.report-header .meta{ grid-area:meta; justify-self:end; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; min-width:360px; background:#fff;}',
+        '.section{ margin-top:2px;}',
+        '.section-title{ font-size:22px; font-weight:800; margin:10px 0 14px;}',
+        '.subsection-title{ font-size:18px; font-weight:800; margin:8px 0 10px;}',
+        '.metrics-grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap:16px; align-items:start; }',
+        '.widget-tag{ display:inline-block; background:#6d28d9; color:#fff; font-weight:800; font-size:14px; line-height:1; padding:8px 14px; border-radius:10px 10px 0 0; margin:8px 0 -2px 0; }',
+
+        '.meta-dl{ margin:0; display:grid; gap:10px; }',
+        '.meta-dl .row{ display:grid; grid-template-columns: 1fr 1fr; align-items:center; column-gap:24px; }',
+        '.meta-dl dt{ margin:0; color:#9aa3b2; font-weight:800; font-size:28px; line-height:1.1; text-align:right; letter-spacing:-0.2px;}',
+        '.meta-dl dd{ margin:0; color:#0f172a; font-weight:800; font-size:28px; line-height:1.1; }',
+
         '@media print{',
         "  [data-page-break='true']{ break-after:page; page-break-after:always }",
         "  [data-page-break='true'][data-keep-with-next='true']{ break-inside:avoid; page-break-inside:avoid }",
         "  [data-page-break='true'][data-keep-with-next='true'] + *{ break-before:avoid-page; page-break-before:auto }",
         '  .page-break-widget{ border:0; padding:0; color:transparent; background:none }',
+        '  .report-header .meta{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }',
+
+        '  /* === 내보내기 시 에디터 장식/핸들 숨김 === */',
+        '  .widget-resize-handle,',
+        '  .widget-block--dragging,',
+        '  .widget-block--resizing,',
+        '  .widget-block::after,',
+        '  [data-widget-type]::before,',
+        '  [data-widget-type]::after{',
+        '    display:none !important;',
+        '    content:none !important;',
+        '  }',
+
+        '  /* 인쇄용으로 테두리/그림자 정리 */',
+        '  .widget-block{',
+        '    border:1px solid #e5e7eb !important;',
+        '    box-shadow:none !important;',
+        '    background:#fff !important;',
+        '  }',
+
+        '  /* free 배치도 인쇄에선 문서 흐름으로 */',
+        '  [data-widget-type][data-position="free"]{',
+        '    position:static !important;',
+        '    transform:none !important;',
+        '    left:auto !important; top:auto !important;',
+        '  }',
+
+        '  /* 포커스/아웃라인 제거 */',
+        '  [data-widget-type]{ outline:none !important; }',
         '}',
       ].join('\n'),
     [],
@@ -562,7 +631,6 @@ const TinyMceEditor: FC = () => {
       return;
     }
 
-    // base64 임시
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -598,14 +666,17 @@ const TinyMceEditor: FC = () => {
         return;
       }
       try {
-        /* eslint-disable @typescript-eslint/no-explicit-any */
+        // 커스텀 플러그인 보장
         ensureWidgetPlugin(window.tinymce as any);
-        /* eslint-enable */
 
         const result = await window.tinymce.init({
           target,
           height: 560,
           branding: false,
+
+          // ⬇ 커스텀 요소를 TinyMCE가 제대로 블록으로 인식하도록
+          custom_elements: 'div[data-widget-type]',
+          valid_children: '+body[div],+div[div]',
 
           plugins: [
             'advlist autolink lists link table code preview searchreplace visualblocks fullscreen insertdatetime',
@@ -694,7 +765,6 @@ const TinyMceEditor: FC = () => {
               const doc = iframe?.contentDocument;
               if (!doc) return;
 
-              // 1) 스타일 토큰 주입(회색 문제 해결)
               const styleEl = doc.createElement('style');
               styleEl.textContent =
                 contentStyle +
@@ -704,7 +774,6 @@ const TinyMceEditor: FC = () => {
               `;
               doc.head.appendChild(styleEl);
 
-              // 2) 프리뷰 문서에서 위젯 정적 렌더
               try {
                 mountAllWidgets(doc);
               } catch (err) {
@@ -829,8 +898,14 @@ const TinyMceEditor: FC = () => {
     }
 
     return () => {
+      dragDropCleanupRef.current?.();
+      dragDropCleanupRef.current = null;
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
+      editorRef.current?.remove();
+      editorRef.current = null;
       isMounted = false;
-      cleanupAll();
+
       const el = document.getElementById(TINYMCE_SCRIPT_ID);
       el?.removeEventListener('load', handleScriptLoad);
       el?.removeEventListener('error', handleScriptError);
@@ -849,7 +924,10 @@ const TinyMceEditor: FC = () => {
 
       <textarea ref={textareaRef} defaultValue={initialContent} aria-label="보고서 에디터" />
 
-      <div className="editor-widget-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+      <div
+        className="editor-widget-actions"
+        style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}
+      >
         <button type="button" onClick={handleInsertTextWidget} disabled={status !== 'ready'}>
           텍스트 위젯 삽입
         </button>
