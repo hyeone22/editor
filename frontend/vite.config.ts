@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const repository = process.env.GITHUB_REPOSITORY;
+const inferredBasePath = repository ? `/${repository.split('/').pop()}/` : '/';
+
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? inferredBasePath : '/',
   plugins: [react()],
   server: {
     port: 5173,

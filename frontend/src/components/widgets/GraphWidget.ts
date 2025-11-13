@@ -183,7 +183,7 @@ const lineOptions = (opt?: GraphWidgetOptions): ChartOptions<'line'> => {
   };
 };
 
-const barConfig = (cfg: GraphWidgetConfig): ChartConfiguration<'bar'> => ({
+const barConfig = (cfg: GraphWidgetConfig): ChartConfiguration<'bar', number[], string> => ({
   type: 'bar',
   data: {
     labels: cfg.labels,
@@ -201,7 +201,7 @@ const barConfig = (cfg: GraphWidgetConfig): ChartConfiguration<'bar'> => ({
   options: barOptions(cfg.options),
 });
 
-const lineConfig = (cfg: GraphWidgetConfig): ChartConfiguration<'line'> => ({
+const lineConfig = (cfg: GraphWidgetConfig): ChartConfiguration<'line', number[], string> => ({
   type: 'line',
   data: {
     labels: cfg.labels,
@@ -275,10 +275,11 @@ const createGraphWidget = (
 
   try {
     const type = asSupported(cfg.chartType);
-    const conf = type === 'bar' ? barConfig(cfg) : lineConfig(cfg);
-
-    // DOM에 붙은 상태에서 차트 생성
-    chart = new Chart(canvas, conf);
+    if (type === 'bar') {
+      chart = new Chart<'bar', number[], string>(canvas, barConfig(cfg));
+    } else {
+      chart = new Chart<'line', number[], string>(canvas, lineConfig(cfg));
+    }
 
     // 다음 프레임에 레이아웃이 잡힌 뒤 안전하게 리사이즈
     rafId = window.requestAnimationFrame(() => {

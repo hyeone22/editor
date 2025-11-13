@@ -1,3 +1,7 @@
 node_modules/
 .env
 .env.*
+frontend/dist/
+**/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
